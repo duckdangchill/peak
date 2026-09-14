@@ -1,0 +1,1529 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>20/10</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400;1,600&family=Be+Vietnam+Pro:wght@300;400&display=swap"
+      rel="stylesheet"
+    />
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+    <script src="wishes.js"></script>
+
+    <style>
+      @property --accent {
+        syntax: "<color>";
+        inherits: true;
+        initial-value: #ffb648;
+      }
+      @property --accent-soft {
+        syntax: "<color>";
+        inherits: true;
+        initial-value: #ff9ec7;
+      }
+
+      :root {
+        --accent: #ffb648;
+        --accent-soft: #ff9ec7;
+        --accent-rgb: 255, 182, 72;
+        --accent-soft-rgb: 255, 158, 199;
+      }
+
+      body {
+        margin: 0;
+        background: #000;
+        color: #fff;
+        font-weight: 100;
+        touch-action: none;
+      }
+
+      #threejs-canvas {
+        position: fixed;
+        inset: 0;
+        z-index: 2;
+        overflow: hidden;
+        background: transparent;
+      }
+      #threejs-canvas::before,
+      #threejs-canvas::after {
+        content: "";
+        position: absolute;
+        pointer-events: none;
+        z-index: 0;
+        border: 1px solid rgba(var(--accent-soft-rgb), 0.14);
+        border-radius: 50%;
+        box-shadow: 0 0 24px rgba(var(--accent-rgb), 0.08),
+          inset 0 0 24px rgba(var(--accent-soft-rgb), 0.04);
+        transition: border-color 0.7s ease, box-shadow 0.7s ease;
+      }
+      #threejs-canvas::before {
+        width: 94vw;
+        height: 48vh;
+        left: -34vw;
+        top: 12vh;
+        transform: rotate(-24deg);
+      }
+      #threejs-canvas::after {
+        width: 112vw;
+        height: 56vh;
+        right: -58vw;
+        bottom: 3vh;
+        transform: rotate(18deg);
+        border-color: rgba(var(--accent-rgb), 0.11);
+      }
+      #threejs-canvas > canvas {
+        position: relative;
+        z-index: 1;
+        display: block;
+      }
+      #aurora-layer {
+        position: fixed;
+        inset: -18%;
+        z-index: 1;
+        pointer-events: none;
+        opacity: 0.42;
+        filter: blur(42px);
+        transform: translate3d(0, 0, 0);
+        transition: opacity 0.8s ease;
+        animation: auroraDrift 18s ease-in-out infinite alternate;
+      }
+      #aurora-layer::before,
+      #aurora-layer::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(
+            ellipse at 24% 34%,
+            rgba(var(--accent-rgb), 0.48),
+            transparent 34%
+          ),
+          radial-gradient(
+            ellipse at 78% 68%,
+            rgba(var(--accent-soft-rgb), 0.38),
+            transparent 38%
+          );
+      }
+      #aurora-layer::after {
+        transform: rotate(28deg) scale(1.12);
+        opacity: 0.62;
+      }
+      @keyframes auroraDrift {
+        0% {
+          transform: translate3d(-2%, -1%, 0) scale(1);
+        }
+        100% {
+          transform: translate3d(2%, 1%, 0) scale(1.08);
+        }
+      }
+
+      #cursor-dot,
+      #cursor-ring {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 1000001;
+        pointer-events: none;
+        opacity: 0;
+        transform: translate3d(-100px, -100px, 0);
+      }
+      #cursor-dot {
+        width: 7px;
+        height: 7px;
+        margin: -3.5px 0 0 -3.5px;
+        border-radius: 50%;
+        background: var(--accent-soft);
+        box-shadow: 0 0 14px 4px rgba(var(--accent-rgb), 0.72);
+        transition: opacity 0.2s ease, background 0.4s ease;
+      }
+      #cursor-ring {
+        width: 27px;
+        height: 27px;
+        margin: -13.5px 0 0 -13.5px;
+        border: 1px solid rgba(var(--accent-soft-rgb), 0.78);
+        border-radius: 50%;
+        transition: opacity 0.2s ease, transform 0.18s ease,
+          border-color 0.4s ease;
+      }
+      #cursor-ring.is-clicking {
+        scale: 0.64;
+      }
+      .cursor-spark {
+        position: fixed;
+        z-index: 1000000;
+        width: 4px;
+        height: 4px;
+        margin: -2px 0 0 -2px;
+        border-radius: 50%;
+        pointer-events: none;
+        background: var(--accent);
+        box-shadow: 0 0 10px 3px rgba(var(--accent-rgb), 0.62);
+        animation: cursorSpark 0.65s ease-out forwards;
+      }
+      @keyframes cursorSpark {
+        to {
+          opacity: 0;
+          transform: translate(var(--spark-dx), var(--spark-dy)) scale(0.15);
+        }
+      }
+      @media (hover: hover) and (pointer: fine) {
+        body,
+        button,
+        a,
+        textarea {
+          cursor: none;
+        }
+        #cursor-dot.visible,
+        #cursor-ring.visible {
+          opacity: 1;
+        }
+      }
+
+      .home-link {
+        position: fixed;
+        top: 14px;
+        left: 14px;
+        z-index: 1000000;
+        color: #fff;
+        text-decoration: none;
+        border: 1px solid rgba(255, 255, 255, 0.55);
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.35);
+        font-family: "Be Vietnam Pro", sans-serif;
+        font-size: 13px;
+      }
+
+      #wish-tabs {
+        position: fixed;
+        top: 14px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000000;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: center;
+        max-width: 78vw;
+      }
+      .wish-tab {
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        background: rgba(0, 0, 0, 0.35);
+        color: #fff;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-family: "Be Vietnam Pro", sans-serif;
+        font-size: 12px;
+        cursor: pointer;
+        transition: background 0.4s ease, border-color 0.4s ease,
+          box-shadow 0.4s ease, transform 0.15s;
+      }
+      .wish-tab.active {
+        background: linear-gradient(135deg, var(--accent-soft), var(--accent));
+        border-color: var(--accent);
+        color: #24152b;
+        font-weight: 600;
+        box-shadow: 0 0 22px rgba(var(--accent-rgb), 0.32);
+        animation: tabActiveIn 0.42s cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+      .wish-tab:hover {
+        transform: translateY(-1px);
+      }
+
+      @keyframes tabActiveIn {
+        0% {
+          opacity: 0.65;
+          transform: scale(0.92) translateY(2px);
+        }
+        65% {
+          transform: scale(1.06) translateY(-1px);
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
+      }
+
+      #tab-warp {
+        position: fixed;
+        inset: -12%;
+        z-index: 999998;
+        pointer-events: none;
+        opacity: 0;
+        transform: scale(0.62) rotate(-3deg);
+        background: radial-gradient(
+          ellipse at center,
+          rgba(var(--accent-soft-rgb), 0.32) 0%,
+          rgba(var(--accent-rgb), 0.12) 24%,
+          transparent 65%
+        );
+      }
+      #tab-warp.run {
+        animation: tabWarp 0.72s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+      }
+      @keyframes tabWarp {
+        0% {
+          opacity: 0;
+          transform: scale(0.62) rotate(-3deg);
+        }
+        28% {
+          opacity: 0.72;
+        }
+        100% {
+          opacity: 0;
+          transform: scale(1.25) rotate(3deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="home-link" href="../">Ve trang chinh</a>
+    <div id="aurora-layer" aria-hidden="true"></div>
+    <div id="cursor-dot" aria-hidden="true"></div>
+    <div id="cursor-ring" aria-hidden="true"></div>
+    <div id="tab-warp" aria-hidden="true"></div>
+
+    <script>
+      window.currentWishTab = "chung";
+
+      function hexToRgb(hex) {
+        const value = String(hex || "").replace("#", "");
+        const normalized = value.length === 3
+          ? value.split("").map((char) => char + char).join("")
+          : value;
+        const parsed = Number.parseInt(normalized, 16);
+        if (!Number.isFinite(parsed)) return [255, 182, 72];
+        return [(parsed >> 16) & 255, (parsed >> 8) & 255, parsed & 255];
+      }
+
+      function getWishTheme(tabId) {
+        return (
+          (window.WISH_TABS || []).find((tab) => tab.id === tabId) ||
+          (window.WISH_TABS || [])[0] || {
+            color: "#ffb648",
+            colorSoft: "#ff9ec7",
+            sealEmoji: "🎁",
+            petalEmojis: ["🌼", "🌸", "✨"],
+          }
+        );
+      }
+
+      function applyWishTheme(tabId) {
+        const theme = getWishTheme(tabId);
+        const accentRgb = hexToRgb(theme.color);
+        const accentSoftRgb = hexToRgb(theme.colorSoft);
+        const petalEmojis = Array.isArray(theme.petalEmojis) && theme.petalEmojis.length
+          ? theme.petalEmojis.slice()
+          : ["🌼", "🌸", "✨"];
+        const root = document.documentElement;
+
+        root.style.setProperty("--accent", theme.color);
+        root.style.setProperty("--accent-soft", theme.colorSoft);
+        root.style.setProperty("--accent-rgb", accentRgb.join(", "));
+        root.style.setProperty("--accent-soft-rgb", accentSoftRgb.join(", "));
+
+        window.currentWishTheme = theme;
+        window.currentAccentRGB = accentRgb;
+        window.currentPetalEmojis = petalEmojis;
+
+        const seal = document.getElementById("env-seal");
+        if (seal) seal.textContent = theme.sealEmoji;
+
+        const newWishButton = document.getElementById("btn-new-wish");
+        if (newWishButton) {
+          newWishButton.textContent = `Rút lời chúc khác ${theme.sealEmoji}`;
+        }
+
+        const copyWishButton = document.getElementById("btn-copy-wish");
+        if (copyWishButton) {
+          copyWishButton.textContent = `Copy lời chúc ${petalEmojis[1] || "📋"} 📋`;
+        }
+
+        const guestbookSend = document.getElementById("guestbook-send");
+        if (guestbookSend) {
+          guestbookSend.textContent = `Gửi lên sổ ${petalEmojis[0]}`;
+        }
+
+        const letterDate = document.querySelector(".letter-date");
+        if (letterDate) letterDate.textContent = `20/10 ${theme.sealEmoji}`;
+
+        const letterSign = document.querySelector(".letter-sign");
+        if (letterSign) letterSign.textContent = `— Gửi tặng bạn ${petalEmojis[0]}`;
+      }
+
+      window.applyWishTheme = applyWishTheme;
+      applyWishTheme(window.currentWishTab);
+
+      function playTabWarp() {
+        const warp = document.getElementById("tab-warp");
+        if (!warp) return;
+        warp.classList.remove("run");
+        void warp.offsetWidth;
+        warp.classList.add("run");
+        setTimeout(() => warp.classList.remove("run"), 800);
+      }
+      window.playTabWarp = playTabWarp;
+
+      function pickWish() {
+        const list = (window.WISHES && window.WISHES[window.currentWishTab]) || [];
+        if (!list.length) return "20/10 vui vẻ nhé 🌸";
+        return list[Math.floor(Math.random() * list.length)];
+      }
+      window.pickWish = pickWish;
+    </script>
+
+    <div id="wish-tabs"></div>
+    <script>
+      (function () {
+        const container = document.getElementById("wish-tabs");
+        (window.WISH_TABS || []).forEach((tab, idx) => {
+          const btn = document.createElement("button");
+          btn.className = "wish-tab" + (idx === 0 ? " active" : "");
+          btn.textContent = `${tab.icon} ${tab.label}`;
+          btn.addEventListener("click", () => {
+            if (window.currentWishTab === tab.id) return;
+            window.currentWishTab = tab.id;
+            window.applyWishTheme(tab.id);
+            window.playTabWarp();
+            container
+              .querySelectorAll(".wish-tab")
+              .forEach((b) => b.classList.remove("active"));
+            btn.classList.add("active");
+
+            if (window.refreshFallingTexts) window.refreshFallingTexts();
+
+            const card = document.getElementById("letter-card");
+            if (card && card.classList.contains("show") && window.showNewWish) {
+              window.showNewWish();
+            }
+          });
+          container.appendChild(btn);
+        });
+        window.applyWishTheme(window.currentWishTab);
+      })();
+    </script>
+
+    <script>
+      (function () {
+        const dot = document.getElementById("cursor-dot");
+        const ring = document.getElementById("cursor-ring");
+        let lastSparkAt = 0;
+
+        function moveCursor(event) {
+          if (event.pointerType === "touch") return;
+          const x = event.clientX;
+          const y = event.clientY;
+          dot.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+          ring.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+          dot.classList.add("visible");
+          ring.classList.add("visible");
+
+          const now = performance.now();
+          if (now - lastSparkAt < 65) return;
+          lastSparkAt = now;
+          const spark = document.createElement("div");
+          spark.className = "cursor-spark";
+          spark.style.left = `${x}px`;
+          spark.style.top = `${y}px`;
+          spark.style.setProperty("--spark-dx", `${(Math.random() - 0.5) * 18}px`);
+          spark.style.setProperty("--spark-dy", `${(Math.random() - 0.5) * 18}px`);
+          document.body.appendChild(spark);
+          setTimeout(() => spark.remove(), 700);
+        }
+
+        document.addEventListener("pointermove", moveCursor);
+        document.addEventListener("pointerdown", (event) => {
+          if (event.pointerType !== "touch") ring.classList.add("is-clicking");
+        });
+        document.addEventListener("pointerup", () => {
+          ring.classList.remove("is-clicking");
+        });
+        window.addEventListener("blur", () => {
+          dot.classList.remove("visible");
+          ring.classList.remove("visible");
+        });
+      })();
+    </script>
+
+    <div id="threejs-canvas"></div>
+
+    <div id="letter-overlay">
+      <div id="letter-blur-bg"></div>
+      <div id="ink-spread" aria-hidden="true"></div>
+
+      <div id="envelope-scene">
+        <div id="envelope-3d">
+          <div class="env-body">
+            <div class="env-bottom"></div>
+            <div class="env-left"></div>
+            <div class="env-right"></div>
+            <div class="env-ribbon-v"></div>
+            <div class="env-ribbon-h"></div>
+            <div class="env-front-fold"></div>
+            <div class="env-flap" id="env-flap"></div>
+            <div class="env-seal" id="env-seal">🎁</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="letter-card" class="lc-hidden">
+        <button id="close-letter" aria-label="Đóng">✕</button>
+        <div class="letter-header">
+          <span class="letter-date">20/10 🎁</span>
+          <div class="letter-deco"></div>
+        </div>
+        <div class="letter-body"></div>
+        <div class="letter-footer">
+          <span class="letter-sign">— Gửi tặng bạn 🌼</span>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      #letter-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: all;
+      }
+      #letter-blur-bg {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        opacity: 0;
+        transition: opacity 0.8s ease;
+      }
+      #letter-blur-bg.show {
+        opacity: 1;
+      }
+      #ink-spread {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        z-index: 1;
+        pointer-events: none;
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.1);
+        background: radial-gradient(
+          circle,
+          rgba(var(--accent-soft-rgb), 0.72) 0%,
+          rgba(var(--accent-rgb), 0.35) 26%,
+          transparent 70%
+        );
+        filter: blur(2px);
+      }
+      #ink-spread.run {
+        animation: inkSpread 1.35s cubic-bezier(0.2, 0.75, 0.2, 1) forwards;
+      }
+      @keyframes inkSpread {
+        0% {
+          opacity: 0.78;
+          transform: translate(-50%, -50%) scale(0.1);
+        }
+        34% {
+          opacity: 0.42;
+        }
+        100% {
+          opacity: 0;
+          transform: translate(-50%, -50%) scale(18);
+        }
+      }
+
+      #envelope-scene {
+        perspective: 900px;
+        position: absolute;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        z-index: 2;
+        transition: opacity 0.5s ease;
+      }
+      #envelope-3d {
+        width: 320px;
+        height: 200px;
+        position: relative;
+        transform-style: preserve-3d;
+        animation: envFloat 3s ease-in-out infinite;
+        opacity: 0;
+        transition: opacity 0.6s ease;
+      }
+      #envelope-3d.show {
+        opacity: 1;
+      }
+      @keyframes envFloat {
+        0%,
+        100% {
+          transform: rotateX(8deg) rotateY(-8deg) translateY(0);
+        }
+        50% {
+          transform: rotateX(8deg) rotateY(-8deg) translateY(-12px);
+        }
+      }
+      .env-body {
+        width: 320px;
+        height: 200px;
+        position: relative;
+        transform-style: preserve-3d;
+      }
+      .env-body::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          145deg,
+          rgba(255, 255, 255, 0.94),
+          var(--accent-soft) 60%,
+          var(--accent)
+        );
+        border-radius: 6px;
+        box-shadow: 0 20px 60px rgba(var(--accent-rgb), 0.35),
+          0 4px 15px rgba(0, 0, 0, 0.3);
+        transition: background 0.45s ease, box-shadow 0.45s ease;
+      }
+      .env-bottom {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 0;
+        height: 0;
+        border-left: 160px solid transparent;
+        border-right: 160px solid transparent;
+        border-bottom: 110px solid #f0b878;
+        z-index: 1;
+      }
+      .env-left {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 0;
+        height: 0;
+        border-top: 100px solid transparent;
+        border-bottom: 100px solid transparent;
+        border-left: 148px solid #f9d9a8;
+        z-index: 1;
+      }
+      .env-right {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 0;
+        height: 0;
+        border-top: 100px solid transparent;
+        border-bottom: 100px solid transparent;
+        border-right: 148px solid #f6c98d;
+        z-index: 1;
+      }
+      .env-ribbon-v {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        width: 18px;
+        transform: translateX(-50%);
+        background: linear-gradient(180deg, var(--accent-soft), var(--accent));
+        z-index: 3;
+        box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.5);
+        transition: background 0.45s ease, box-shadow 0.45s ease;
+      }
+      .env-ribbon-h {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 50%;
+        height: 18px;
+        transform: translateY(-50%);
+        background: linear-gradient(90deg, var(--accent-soft), var(--accent));
+        z-index: 3;
+        box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.5);
+        transition: background 0.45s ease, box-shadow 0.45s ease;
+      }
+      .env-front-fold {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 80%;
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(var(--accent-rgb), 0.4),
+          transparent
+        );
+        z-index: 2;
+      }
+      .env-flap {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 0;
+        height: 0;
+        border-left: 160px solid transparent;
+        border-right: 160px solid transparent;
+        border-top: 115px solid var(--accent);
+        transform-origin: top center;
+        transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1),
+          border-top-color 0.45s ease, filter 0.45s ease;
+        z-index: 5;
+        filter: drop-shadow(0 4px 8px rgba(var(--accent-rgb), 0.3));
+      }
+      .env-flap.open {
+        transform: rotateX(-180deg);
+      }
+      .env-seal {
+        position: absolute;
+        top: 42px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 28px;
+        z-index: 6;
+        transition: opacity 0.4s ease, transform 0.4s ease, filter 0.45s ease;
+        filter: drop-shadow(0 2px 6px rgba(var(--accent-rgb), 0.6));
+      }
+      .env-seal.hide {
+        opacity: 0;
+        transform: translateX(-50%) scale(0.5);
+      }
+      #letter-rising {
+        position: absolute;
+        width: 280px;
+        height: 160px;
+        background: linear-gradient(
+          160deg,
+          #fff,
+          rgba(var(--accent-soft-rgb), 0.12)
+        );
+        border-radius: 4px;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%) translateY(0);
+        z-index: 4;
+        box-shadow: 0 2px 12px rgba(var(--accent-rgb), 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px;
+        transition: transform 0.9s cubic-bezier(0.2, 0.8, 0.2, 1),
+          opacity 0.4s ease;
+        opacity: 0;
+      }
+      #letter-rising.rise {
+        transform: translateX(-50%) translateY(-170px);
+        opacity: 1;
+      }
+
+      #letter-card {
+        position: absolute;
+        z-index: 3;
+        width: min(90vw, 440px);
+        background: linear-gradient(
+          160deg,
+          #fff,
+          rgba(var(--accent-soft-rgb), 0.18) 50%,
+          rgba(var(--accent-rgb), 0.12)
+        );
+        border-radius: 16px;
+        padding: 36px 36px 28px;
+        box-shadow: 0 30px 80px rgba(var(--accent-rgb), 0.35),
+          0 8px 24px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(var(--accent-soft-rgb), 0.5);
+        transform: scale(0.85) translateY(30px);
+        opacity: 0;
+        pointer-events: all;
+        font-family: "Lora", "Be Vietnam Pro", serif;
+        max-height: 85vh;
+        overflow-y: auto;
+        transition: opacity 0.6s ease,
+          transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1),
+          background 0.45s ease, box-shadow 0.45s ease, border-color 0.45s ease;
+      }
+      #letter-card.show {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+      #letter-card.lc-hidden {
+        display: none;
+      }
+      #close-letter {
+        position: absolute;
+        top: 14px;
+        right: 16px;
+        background: rgba(var(--accent-rgb), 0.12);
+        border: 1px solid rgba(var(--accent-rgb), 0.3);
+        color: var(--accent);
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.45s ease, border-color 0.45s ease,
+          color 0.45s ease, transform 0.2s;
+      }
+      #close-letter:hover {
+        background: rgba(var(--accent-rgb), 0.25);
+        transform: rotate(90deg);
+      }
+      .letter-header {
+        margin-bottom: 18px;
+      }
+      .letter-date {
+        font-size: 13px;
+        color: var(--accent);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        font-family: "Courier New", monospace;
+      }
+      .letter-deco {
+        margin-top: 10px;
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          rgba(var(--accent-rgb), 0.6),
+          rgba(var(--accent-rgb), 0.1)
+        );
+      }
+      .letter-body {
+        min-height: 80px;
+      }
+      .letter-body p {
+        margin: 0 0 14px;
+        line-height: 1.9;
+        font-style: italic;
+        color: #3a1a2e;
+        word-break: break-word;
+        font-family: "Lora", "Be Vietnam Pro", serif;
+      }
+      .letter-footer {
+        margin-top: 20px;
+        text-align: right;
+      }
+      .letter-sign {
+        font-size: 15px;
+        color: var(--accent);
+        font-style: italic;
+        opacity: 0;
+        transition: opacity 0.8s ease;
+      }
+      .letter-sign.show {
+        opacity: 1;
+      }
+      .cursor-blink {
+        display: inline-block;
+        width: 2px;
+        height: 1em;
+        background: var(--accent);
+        margin-left: 2px;
+        vertical-align: middle;
+        animation: blink 0.8s step-end infinite;
+      }
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0;
+        }
+      }
+      #letter-overlay.fade-out {
+        animation: overlayOut 0.6s forwards;
+      }
+      @keyframes overlayOut {
+        to {
+          opacity: 0;
+          pointer-events: none;
+        }
+      }
+      .petal {
+        position: absolute;
+        font-size: 18px;
+        pointer-events: none;
+        animation: petalFly 2.2s ease-out forwards;
+        z-index: 20;
+      }
+      @keyframes petalFly {
+        0% {
+          opacity: 1;
+          transform: translate(0, 0) rotate(0) scale(1);
+        }
+        100% {
+          opacity: 0;
+          transform: translate(var(--tx), var(--ty)) rotate(var(--tr))
+            scale(0.4);
+        }
+      }
+
+      #wish-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 18px;
+      }
+      #wish-actions button {
+        flex: 1;
+        padding: 10px;
+        border: none;
+        border-radius: 10px;
+        font-family: "Lora", "Be Vietnam Pro", serif;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background 0.45s ease, border-color 0.45s ease,
+          color 0.45s ease, opacity 0.2s, transform 0.15s;
+      }
+      #btn-new-wish {
+        background: linear-gradient(135deg, var(--accent-soft), var(--accent));
+        color: #24152b;
+        transition: background 0.45s ease, opacity 0.2s, transform 0.15s;
+      }
+      #btn-copy-wish {
+        background: rgba(var(--accent-rgb), 0.12);
+        border: 1px solid rgba(var(--accent-rgb), 0.3) !important;
+        color: var(--accent);
+        transition: background 0.45s ease, border-color 0.45s ease,
+          color 0.45s ease, opacity 0.2s, transform 0.15s;
+      }
+      #wish-actions button:hover {
+        transform: translateY(-1px);
+        opacity: 0.9;
+      }
+
+      #guestbook-box {
+        margin-top: 22px;
+        border-top: 1px solid rgba(var(--accent-rgb), 0.2);
+        padding-top: 18px;
+        animation: fadeUp 0.6s ease forwards;
+      }
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .guestbook-label {
+        font-size: 13px;
+        color: var(--accent);
+        margin-bottom: 4px;
+        font-family: "Courier New", monospace;
+        letter-spacing: 1px;
+      }
+      .guestbook-note {
+        font-size: 11px;
+        color: #c08aa0;
+        margin-bottom: 10px;
+      }
+      #guestbook-input {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid rgba(var(--accent-rgb), 0.35);
+        border-radius: 10px;
+        padding: 12px 14px;
+        font-size: 15px;
+        font-family: "Lora", "Be Vietnam Pro", serif;
+        font-style: italic;
+        color: #3a1a2e;
+        background: rgba(var(--accent-soft-rgb), 0.12);
+        resize: none;
+        outline: none;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        line-height: 1.8;
+      }
+      #guestbook-input:focus {
+        border-color: var(--accent-soft);
+        box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.15);
+      }
+      #guestbook-input::placeholder {
+        color: #c08aa0;
+      }
+      #guestbook-send {
+        margin-top: 10px;
+        width: 100%;
+        padding: 11px;
+        background: linear-gradient(135deg, var(--accent-soft), var(--accent));
+        border: none;
+        border-radius: 10px;
+        color: #24152b;
+        font-size: 15px;
+        font-family: "Lora", "Be Vietnam Pro", serif;
+        cursor: pointer;
+        letter-spacing: 0.5px;
+        transition: background 0.45s ease, box-shadow 0.45s ease, opacity 0.2s,
+          transform 0.15s;
+        box-shadow: 0 4px 16px rgba(var(--accent-rgb), 0.4);
+      }
+      #guestbook-send:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+      }
+      #guestbook-list {
+        margin-top: 14px;
+        max-height: 160px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .guestbook-entry {
+        font-size: 13px;
+        font-style: italic;
+        color: #3a1a2e;
+        background: rgba(var(--accent-soft-rgb), 0.35);
+        border-radius: 8px;
+        padding: 8px 10px;
+        word-break: break-word;
+      }
+      .guestbook-empty {
+        font-size: 13px;
+        color: #c08aa0;
+        text-align: center;
+      }
+
+      @media (max-width: 700px) {
+        body {
+          touch-action: auto;
+          overflow: hidden;
+        }
+
+        #threejs-canvas {
+          touch-action: none;
+        }
+
+        #threejs-canvas::before {
+          width: 150vw;
+          height: 42vh;
+          left: -72vw;
+          top: 18vh;
+        }
+
+        #threejs-canvas::after {
+          width: 170vw;
+          height: 48vh;
+          right: -102vw;
+          bottom: 8vh;
+        }
+
+        #aurora-layer {
+          opacity: 0.28;
+          filter: blur(28px);
+        }
+
+        .home-link {
+          top: 9px;
+          left: 9px;
+          padding: 7px 10px;
+          font-size: 11px;
+        }
+
+        #wish-tabs {
+          top: 52px;
+          left: 8px;
+          right: 8px;
+          transform: none;
+          max-width: none;
+          width: auto;
+          gap: 5px;
+        }
+
+        .wish-tab {
+          padding: 7px 9px;
+          font-size: 11px;
+          min-height: 32px;
+        }
+
+        #tab-warp {
+          inset: -24%;
+        }
+
+        #letter-overlay {
+          touch-action: auto;
+        }
+
+        #envelope-3d {
+          animation-name: envFloatMobile;
+        }
+
+        @keyframes envFloatMobile {
+          0%,
+          100% {
+            transform: scale(0.78) rotateX(8deg) rotateY(-8deg)
+              translateY(0);
+          }
+          50% {
+            transform: scale(0.78) rotateX(8deg) rotateY(-8deg)
+              translateY(-10px);
+          }
+        }
+
+        #letter-rising {
+          width: 240px;
+          height: 138px;
+          font-size: 25px;
+        }
+
+        #letter-rising.rise {
+          transform: translateX(-50%) translateY(-145px);
+        }
+
+        #letter-card {
+          box-sizing: border-box;
+          width: calc(100vw - 24px);
+          max-height: calc(100dvh - 24px);
+          padding: 30px 18px 20px;
+          border-radius: 14px;
+        }
+
+        #close-letter {
+          top: 9px;
+          right: 10px;
+          width: 30px;
+          height: 30px;
+        }
+
+        .letter-header {
+          margin-bottom: 14px;
+        }
+
+        .letter-body p {
+          font-size: 15px;
+          line-height: 1.75;
+        }
+
+        .letter-footer {
+          margin-top: 14px;
+        }
+
+        #wish-actions {
+          gap: 7px;
+          margin-top: 14px;
+        }
+
+        #wish-actions button {
+          padding: 10px 7px;
+          font-size: 12px;
+        }
+
+        #guestbook-box {
+          margin-top: 16px;
+          padding-top: 14px;
+        }
+
+        #guestbook-input {
+          font-size: 14px;
+          padding: 10px 12px;
+        }
+
+        #guestbook-send {
+          padding: 10px;
+          font-size: 14px;
+        }
+
+        #guestbook-list {
+          max-height: 120px;
+        }
+      }
+    </style>
+
+    <script>
+      (function () {
+        const DELAY = 6500;
+        const overlay = document.getElementById("letter-overlay");
+        const blurBg = document.getElementById("letter-blur-bg");
+        const env3d = document.getElementById("envelope-3d");
+        const flap = document.getElementById("env-flap");
+        const seal = document.getElementById("env-seal");
+        const card = document.getElementById("letter-card");
+        const bodyEl = card.querySelector(".letter-body");
+        const sign = card.querySelector(".letter-sign");
+        const closeBtn = document.getElementById("close-letter");
+        const envScene = document.getElementById("envelope-scene");
+        const inkSpread = document.getElementById("ink-spread");
+        const DISCORD_WEBHOOK_URL =
+          "https://discord.com/api/webhooks/1548527249202880534/uH8vq22OpllFQdeI9PprG0c-2rci8FAaTNWPXk05Mefa2yMRJfCAoA2wq1wqL6ixu_Fk";
+
+        if (window.applyWishTheme) {
+          window.applyWishTheme(window.currentWishTab);
+        }
+
+        function spawnPetals(cx, cy) {
+          const em = window.currentPetalEmojis || ["🌼", "🌸", "✨"];
+          const emojiOffset = Math.floor(Math.random() * em.length);
+          for (let i = 0; i < 16; i++) {
+            const d = document.createElement("div");
+            d.className = "petal";
+            d.textContent = em[(i + emojiOffset) % em.length];
+            const a = (i / 16) * Math.PI * 2,
+              dist = 80 + Math.random() * 130;
+            d.style.cssText = `--tx:${Math.cos(a) * dist}px;--ty:${
+              Math.sin(a) * dist
+            }px;--tr:${
+              Math.random() * 360
+            }deg;left:${cx}px;top:${cy}px;animation-delay:${
+              Math.random() * 0.3
+            }s`;
+            overlay.appendChild(d);
+            setTimeout(() => d.remove(), 1750);
+          }
+        }
+
+        let typeToken = 0;
+        function typeWriter(text, container, onDone) {
+          const myToken = ++typeToken;
+          container.innerHTML = "";
+          const lines = text.split("\n");
+          const els = [];
+          lines.forEach((line, i) => {
+            if (line === "") {
+              const sp = document.createElement("div");
+              sp.style.height = "8px";
+              container.appendChild(sp);
+              els.push(null);
+            } else {
+              const p = document.createElement("p");
+              p.style.fontSize = i === 0 ? "20px" : "17px";
+              container.appendChild(p);
+              els.push(p);
+            }
+          });
+          const cursor = document.createElement("span");
+          cursor.className = "cursor-blink";
+          container.appendChild(cursor);
+
+          let li = 0,
+            ci = 0;
+          function tick() {
+            if (myToken !== typeToken) return; // có yêu cầu rút lời chúc mới, huỷ bản đang gõ dở
+            while (li < lines.length && els[li] === null) {
+              li++;
+              ci = 0;
+            }
+            if (li >= lines.length) {
+              cursor.remove();
+              if (onDone) onDone();
+              return;
+            }
+            const line = lines[li];
+            if (ci < line.length) {
+              els[li].textContent += line[ci++];
+              setTimeout(tick, 65 + Math.random() * 35);
+            } else {
+              li++;
+              ci = 0;
+              setTimeout(tick, 120);
+            }
+          }
+          setTimeout(tick, 300);
+        }
+
+        function showNewWish() {
+          sign.classList.remove("show");
+          typeWriter(window.pickWish(), bodyEl, () => {
+            sign.classList.add("show");
+          });
+        }
+        window.showNewWish = showNewWish;
+
+        function initWishActions() {
+          if (document.getElementById("wish-actions")) return;
+          const footer = card.querySelector(".letter-footer");
+          const row = document.createElement("div");
+          row.id = "wish-actions";
+          const theme = window.currentWishTheme || {
+            sealEmoji: "🎁",
+            petalEmojis: ["🌼", "🌸"],
+          };
+          row.innerHTML = `
+      <button id="btn-new-wish" type="button">Rút lời chúc khác ${theme.sealEmoji}</button>
+      <button id="btn-copy-wish" type="button">Copy lời chúc ${theme.petalEmojis[1] || "📋"} 📋</button>
+    `;
+          footer.insertAdjacentElement("beforebegin", row);
+
+          document
+            .getElementById("btn-new-wish")
+            .addEventListener("click", showNewWish);
+
+          document
+            .getElementById("btn-copy-wish")
+            .addEventListener("click", () => {
+              const text = Array.from(bodyEl.querySelectorAll("p"))
+                .map((p) => p.textContent)
+                .join("\n");
+              const btn = document.getElementById("btn-copy-wish");
+              navigator.clipboard
+                .writeText(text)
+                .then(() => {
+                  const old = btn.textContent;
+                  btn.textContent = "Đã copy ✓";
+                  setTimeout(() => (btn.textContent = old), 1500);
+                })
+                .catch(() => {
+                  const old = btn.textContent;
+                  btn.textContent = "Không copy được 😢";
+                  setTimeout(() => (btn.textContent = old), 1500);
+                });
+            });
+        }
+
+        const GUESTBOOK_KEY = "guestbook-20-10";
+
+        function loadGuestbook() {
+          try {
+            return JSON.parse(localStorage.getItem(GUESTBOOK_KEY) || "[]");
+          } catch (e) {
+            return [];
+          }
+        }
+
+        function saveGuestbook(list) {
+          try {
+            localStorage.setItem(GUESTBOOK_KEY, JSON.stringify(list.slice(-50)));
+          } catch (e) {}
+        }
+
+        function sendGuestbookToDiscord(text) {
+          const tabLabel =
+            (window.currentWishTheme && window.currentWishTheme.label) ||
+            window.currentWishTab ||
+            "Chung";
+
+          return fetch(DISCORD_WEBHOOK_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              username: "Sổ lưu bút 20/10",
+              content: `**${tabLabel}**\n${text}`,
+              allowed_mentions: { parse: [] },
+            }),
+          }).then((response) => {
+            if (!response.ok) throw new Error(`Discord HTTP ${response.status}`);
+          });
+        }
+
+        function renderGuestbook(listEl) {
+          const entries = loadGuestbook();
+          listEl.innerHTML = "";
+          if (!entries.length) {
+            const empty = document.createElement("div");
+            empty.className = "guestbook-empty";
+            empty.textContent = "Chưa có lời chúc nào, để lại 1 dòng nhé 🌷";
+            listEl.appendChild(empty);
+            return;
+          }
+          entries
+            .slice()
+            .reverse()
+            .forEach((entry) => {
+              const item = document.createElement("div");
+              item.className = "guestbook-entry";
+              item.textContent = entry; // textContent để tránh chèn HTML lạ
+              listEl.appendChild(item);
+            });
+        }
+
+        function showGuestbook() {
+          if (document.getElementById("guestbook-box")) return;
+          const footer = card.querySelector(".letter-footer");
+          const box = document.createElement("div");
+          box.id = "guestbook-box";
+          const theme = window.currentWishTheme || {
+            petalEmojis: ["🌼"],
+          };
+          box.innerHTML = `
+      <div class="guestbook-label">📖 Sổ lưu bút 20/10</div>
+      <div class="guestbook-note">để lại 1 lời chúc — lưu trên máy này, trang tĩnh nên chưa có server chung</div>
+      <textarea id="guestbook-input" placeholder="Viết một lời chúc..." rows="2"></textarea>
+      <button id="guestbook-send" type="button">Gửi lên sổ ${theme.petalEmojis[0]}</button>
+      <div id="guestbook-list"></div>
+    `;
+          footer.insertAdjacentElement("afterend", box);
+
+          const listEl = document.getElementById("guestbook-list");
+          renderGuestbook(listEl);
+
+          document.getElementById("guestbook-send").addEventListener("click", () => {
+            const input = document.getElementById("guestbook-input");
+            const sendButton = document.getElementById("guestbook-send");
+            const txt = input.value.trim();
+            if (!txt) return;
+            const entries = loadGuestbook();
+            entries.push(txt);
+            saveGuestbook(entries);
+            input.value = "";
+            renderGuestbook(listEl);
+
+            sendButton.disabled = true;
+            sendButton.textContent = "Đang gửi Discord…";
+            sendGuestbookToDiscord(txt)
+              .then(() => {
+                sendButton.textContent = "Đã gửi Discord ✓";
+              })
+              .catch(() => {
+                sendButton.textContent = "Đã lưu máy, Discord lỗi";
+              })
+              .finally(() => {
+                setTimeout(() => {
+                  sendButton.disabled = false;
+                  if (window.applyWishTheme) {
+                    window.applyWishTheme(window.currentWishTab);
+                  }
+                }, 1600);
+              });
+          });
+        }
+
+        const _seq_start = () => {
+          blurBg.classList.add("show");
+          setTimeout(() => {
+            env3d.classList.add("show");
+            setTimeout(() => {
+              inkSpread.classList.remove("run");
+              void inkSpread.offsetWidth;
+              inkSpread.classList.add("run");
+              flap.classList.add("open");
+              seal.classList.add("hide");
+              const r = env3d.getBoundingClientRect();
+              spawnPetals(r.left + r.width / 2, r.top + r.height / 3);
+
+              const rising = document.createElement("div");
+              rising.id = "letter-rising";
+              rising.textContent =
+                (window.currentWishTheme && window.currentWishTheme.sealEmoji) ||
+                "🎁";
+              env3d.querySelector(".env-body").appendChild(rising);
+              setTimeout(() => rising.classList.add("rise"), 50);
+
+              setTimeout(() => {
+                envScene.style.opacity = "0";
+                envScene.style.pointerEvents = "none";
+                card.classList.remove("lc-hidden");
+                setTimeout(() => card.classList.add("show"), 30);
+                typeWriter(window.pickWish(), bodyEl, () => {
+                  sign.classList.add("show");
+                  initWishActions();
+                  setTimeout(showGuestbook, 800);
+                });
+              }, 950);
+            }, 2500);
+          }, 600);
+        };
+        setTimeout(_seq_start, DELAY);
+
+        closeBtn.addEventListener("click", () => {
+          overlay.classList.add("fade-out");
+          setTimeout(() => (overlay.style.display = "none"), 650);
+        });
+      })();
+    </script>
+
+    <style>
+      #toggle-music {
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        background: none;
+        border: 2px solid #fff;
+        border-radius: 50%;
+        cursor: pointer;
+        color: #fff;
+        padding: 6px;
+        transition: transform 0.2s ease;
+        z-index: 999999;
+      }
+      #toggle-music.playing #icon-note,
+      #toggle-music.playing #icon-note-slash {
+        animation: spin 3s linear infinite;
+      }
+      #toggle-music svg {
+        display: block;
+      }
+      .playing #icon-note {
+        display: block !important;
+      }
+
+      .playing #icon-note-slash {
+        display: none !important;
+      }
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+
+    <button id="toggle-music">
+      <svg id="icon-note" width="24" height="24" style="display: none">
+        <path fill="currentColor" d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z" />
+      </svg>
+      <svg id="icon-note-slash" width="24" height="24">
+        <path
+          fill="currentColor"
+          d="M10 3v10.55A4 4 0 1 0 12 15.55V5h4V3h-6z"
+        />
+        <line
+          x1="3"
+          y1="3"
+          x2="21"
+          y2="21"
+          stroke="currentColor"
+          stroke-width="2"
+        />
+      </svg>
+    </button>
+
+    <audio id="bg-audio" src="audio.mp3" loop autoplay preload="auto"></audio>
+
+    <script>
+      let isPlaying = false;
+      const btn = document.getElementById("toggle-music");
+      const audioEl = document.getElementById("bg-audio");
+      window.addEventListener("load", () => {
+        audioEl
+          .play()
+          .then(() => {
+            isPlaying = true;
+            btn.classList.add("playing");
+          })
+          .catch(() => {});
+      });
+      function playMedia() {
+        audioEl.play();
+      }
+      function pauseMedia() {
+        audioEl.pause();
+      }
+
+      btn.addEventListener("click", () => {
+        if (!isPlaying) playMedia();
+        else pauseMedia();
+        isPlaying = !isPlaying;
+        btn.classList.toggle("playing", isPlaying);
+      });
+    </script>
+
+    <script src="script.js"></script>
+  </body>
+</html>
